@@ -9,11 +9,9 @@ import { Menu, X, Moon, Sun, Wallet } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { FaGithub } from 'react-icons/fa';
-// REMOVE THESE IMPORTS
-// import Web3 from 'web3';
-// import ABI from '@/components/Wallet/ABI.json';
-// Add at the top
-import { useWallet } from '@/components/Wallet/WalletContext';
+import Web3 from 'web3';
+import ABI from '@/components/Wallet/ABI.json';
+
 // Add Ethereum type declaration
 declare global {
   interface Window {
@@ -21,18 +19,85 @@ declare global {
   }
 }
 
+// Wallet Component
+const WalletComponent = ({ saveState }: { saveState: (state: any) => void }) => {
+  const [connected, setConnected] = useState(true);
+  
+  const init = async () => {
+    try {
+      if (!window.ethereum) {
+        alert("Please install MetaMask!");
+        return;
+      }
+      
+      const web3 = new Web3(window.ethereum);
+      await window.ethereum.request({ method: 'eth_requestAccounts' });
+      const contract = new web3.eth.Contract(
+        ABI,
+        "0xD76852B784ec1Ec11Db89dABeE7a0DAC2FDEB466"
+      );
+      setConnected(false);
+      saveState({ web3: web3, contract: contract });
+    } catch (error) {
+      console.error("Wallet connection error:", error);
+      alert("Please install MetaMask and try again!");
+    }
+  };
+
+  const isAndroid = typeof window !== 'undefined' && /android/i.test(navigator.userAgent);
+
+  return (
+    <div className="flex items-center gap-2">
+      {isAndroid && !window.ethereum && (
+        <Button
+          className="px-3 py-2 rounded-full bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white text-xs"
+          asChild
+        >
+          <a 
+            href="https://metamask.app.link/dapp/sriche.netlify.app/"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            Mobile
+          </a>
+        </Button>
+      )}
+      
+      <Button
+        onClick={init}
+        disabled={!connected}
+        className={cn(
+          'px-4 py-2 rounded-full transition-all duration-300',
+          connected
+            ? 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700'
+            : 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700',
+          'text-white font-medium text-sm',
+          'flex items-center gap-2'
+        )}
+      >
+        <Wallet className="h-4 w-4" />
+        {connected ? "Connect Wallet" : "Connected"}
+      </Button>
+    </div>
+  );
+};
+
 const Header = () => {
   const { setTheme, theme } = useTheme();
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
-  // REMOVE THESE STATE VARIABLES
-  // const [isConnected, setIsConnected] = useState(false);
-  // const [isConnecting, setIsConnecting] = useState(false);
-  // const [walletState, setWalletState] = useState<{ web3: any; contract: any } | null>(null);
-
-  // REPLACE WITH CONTEXT HOOK
-  const { isConnected, isConnecting, connectWallet } = useWallet();
   
+  // Add wallet state and saveState function
+  const [state, setState] = useState({
+    web3: null,
+    contract: null
+  });
+
+  const saveState = (state: any) => {
+    console.log(state);
+    setState(state);
+  };
+
   // Handle scroll effect
   useEffect(() => {
     const handleScroll = () => {
@@ -74,91 +139,6 @@ const Header = () => {
     document.addEventListener('click', handleLinkClick);
     return () => document.removeEventListener('click', handleLinkClick);
   }, []);
-
-  // REMOVE THIS useEffect - It should be handled in WalletContext
-  // // Check if user is already connected on mount
-  // useEffect(() => {
-  //   const checkIfWalletIsConnected = async () => {
-  //     try {
-  //       if (window.ethereum) {
-  //         const accounts = await window.ethereum.request({
-  //           method: 'eth_accounts',
-  //         });
-  //         if (accounts.length > 0) {
-  //           await initWallet();
-  //         }
-  //       }
-  //     } catch (error) {
-  //       console.error('Error checking wallet connection:', error);
-  //     }
-  //   };
-  // 
-  //   checkIfWalletIsConnected();
-  // }, []);
-
-  // REMOVE THIS FUNCTION - It's handled in WalletContext
-  // const initWallet = async () => {
-  //   try {
-  //     if (!window.ethereum) {
-  //       alert("Please install MetaMask.");
-  //       return;
-  //     }
-  // 
-  //     setIsConnecting(true);
-  //     const web3 = new Web3(window.ethereum);
-  // 
-  //     // Request accounts first
-  //     const accounts = await window.ethereum.request({
-  //       method: "eth_requestAccounts",
-  //     });
-  // 
-  //     if (!accounts || accounts.length === 0) {
-  //       throw new Error("No accounts found");
-  //     }
-  // 
-  //     const contract = new web3.eth.Contract(
-  //       ABI as any,
-  //       "0x8E15156424e1BB232F8D891Cab7110AdF16BE5e1" // your contract address
-  //     );
-  // 
-  //     // Save state (you can use this for transactions later)
-  //     const state = { web3, contract };
-  //     setWalletState(state);
-  //     setIsConnected(true);
-  //     
-  //     // You can also pass this state to parent or context if needed
-  //     console.log('Wallet connected:', accounts[0]);
-  //     
-  //     return state;
-  //   } catch (error) {
-  //     console.error("Connection error:", error);
-  //     alert("MetaMask connection failed. Please try again.");
-  //     throw error;
-  //   } finally {
-  //     setIsConnecting(false);
-  //   }
-  // };
-
-  // REMOVE THIS FUNCTION - Use connectWallet from context instead
-  // // Main connect wallet function
-  // const connectWallet = async () => {
-  //   try {
-  //     const isAndroid = /android/i.test(navigator.userAgent);
-  //     
-  //     // Check if on Android mobile and MetaMask is not installed
-  //     if (isAndroid && !window.ethereum) {
-  //       window.open('https://metamask.app.link/dapp/sriche.netlify.app/', '_blank');
-  //       return;
-  //     }
-  // 
-  //     // Regular connection flow
-  //     await initWallet();
-  //     
-  //   } catch (error) {
-  //     console.error('Error connecting wallet:', error);
-  //     // Error is already handled in initWallet
-  //   }
-  // };
 
   const toggleMenu = () => setIsOpen(!isOpen);
 
@@ -204,24 +184,8 @@ const Header = () => {
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-8">
               <NavLinks />
-              
-              {/* Connect Wallet Button */}
-              <Button
-                onClick={connectWallet}
-                disabled={isConnecting}
-                className={cn(
-                  'px-4 py-2 rounded-full transition-all duration-300',
-                  isConnected
-                    ? 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700'
-                    : 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700',
-                  'text-white font-medium text-sm',
-                  'flex items-center gap-2'
-                )}
-              >
-                <Wallet className="h-4 w-4" />
-                {isConnecting ? 'Connecting...' : isConnected ? 'Connected' : 'Connect Wallet'}
-              </Button>
-              
+              {/* Add Wallet Component here */}
+              <WalletComponent saveState={saveState} />
               <ThemeToggle theme={theme} setTheme={setTheme} />
               <Link href="https://github.com/awesome-pro/pro-portfolio" target="_blank" className="relative z-[60]">
                 <FaGithub className="h-5 w-5 text-gray-800 dark:text-gray-200" />
@@ -230,27 +194,8 @@ const Header = () => {
 
             {/* Mobile Navigation Toggle */}
             <div className="flex items-center space-x-4 md:hidden">
-              {/* Mobile Connect Wallet Button (Icon only) */}
-              <Button
-                onClick={connectWallet}
-                disabled={isConnecting}
-                size="icon"
-                className={cn(
-                  'relative z-[60] rounded-full',
-                  isConnected
-                    ? 'bg-green-500 hover:bg-green-600'
-                    : 'bg-blue-500 hover:bg-blue-600'
-                )}
-              >
-                <Wallet className="h-4 w-4 text-white" />
-                {isConnecting && (
-                  <span className="absolute -top-1 -right-1 h-3 w-3">
-                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 bg-blue-500"></span>
-                  </span>
-                )}
-              </Button>
-              
+              {/* Mobile Wallet Button */}
+              <MobileWallet saveState={saveState} />
               <div className="relative z-[60]">
                 <ThemeToggle theme={theme} setTheme={setTheme} />
               </div>
@@ -287,44 +232,14 @@ const Header = () => {
               className="flex flex-col items-center justify-center min-h-screen px-4 pt-16"
             >
               <NavLinks mobile onClick={() => setIsOpen(false)} />
-              
-              {/* Mobile Full Connect Wallet Button */}
+              {/* Mobile Full Wallet Button */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5 }}
                 className="mt-8"
               >
-                <Button
-                  onClick={connectWallet}
-                  disabled={isConnecting}
-                  className={cn(
-                    'px-6 py-3 rounded-full transition-all duration-300 text-lg',
-                    isConnected
-                      ? 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700'
-                      : 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700',
-                    'text-white font-medium',
-                    'flex items-center gap-3'
-                  )}
-                >
-                  <Wallet className="h-5 w-5" />
-                  {isConnecting ? 'Connecting...' : isConnected ? 'Wallet Connected' : 'Connect Wallet'}
-                </Button>
-                
-                {/* Android mobile link - You may want to move this logic to WalletContext */}
-                {typeof navigator !== 'undefined' && /android/i.test(navigator.userAgent) && !window.ethereum && (
-                  <div className="mt-4 text-center">
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Metamask not installed?</p>
-                    <a 
-                      href="https://metamask.app.link/dapp/sriche.netlify.app/"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-500 hover:text-blue-600 text-sm font-medium"
-                    >
-                      Click here for mobile
-                    </a>
-                  </div>
-                )}
+                <MobileFullWallet saveState={saveState} />
               </motion.div>
             </motion.div>
           </motion.div>
@@ -334,7 +249,109 @@ const Header = () => {
   );
 };
 
-// Rest of the code remains the same...
+// Mobile Wallet Component (Icon only)
+const MobileWallet = ({ saveState }: { saveState: (state: any) => void }) => {
+  const [connected, setConnected] = useState(true);
+  
+  const init = async () => {
+    try {
+      if (!window.ethereum) {
+        alert("Please install MetaMask!");
+        return;
+      }
+      
+      const web3 = new Web3(window.ethereum);
+      await window.ethereum.request({ method: 'eth_requestAccounts' });
+      const contract = new web3.eth.Contract(
+        ABI,
+        "0xD76852B784ec1Ec11Db89dABeE7a0DAC2FDEB466"
+      );
+      setConnected(false);
+      saveState({ web3: web3, contract: contract });
+    } catch (error) {
+      console.error("Wallet connection error:", error);
+      alert("Please install MetaMask and try again!");
+    }
+  };
+
+  return (
+    <Button
+      onClick={init}
+      disabled={!connected}
+      size="icon"
+      className={cn(
+        'relative z-[60] rounded-full',
+        connected
+          ? 'bg-blue-500 hover:bg-blue-600'
+          : 'bg-green-500 hover:bg-green-600'
+      )}
+    >
+      <Wallet className="h-4 w-4 text-white" />
+    </Button>
+  );
+};
+
+// Mobile Full Wallet Component
+const MobileFullWallet = ({ saveState }: { saveState: (state: any) => void }) => {
+  const [connected, setConnected] = useState(true);
+  const isAndroid = typeof window !== 'undefined' && /android/i.test(navigator.userAgent);
+  
+  const init = async () => {
+    try {
+      if (!window.ethereum) {
+        alert("Please install MetaMask!");
+        return;
+      }
+      
+      const web3 = new Web3(window.ethereum);
+      await window.ethereum.request({ method: 'eth_requestAccounts' });
+      const contract = new web3.eth.Contract(
+        ABI,
+        "0xD76852B784ec1Ec11Db89dABeE7a0DAC2FDEB466"
+      );
+      setConnected(false);
+      saveState({ web3: web3, contract: contract });
+    } catch (error) {
+      console.error("Wallet connection error:", error);
+      alert("Please install MetaMask and try again!");
+    }
+  };
+
+  return (
+    <>
+      <Button
+        onClick={init}
+        disabled={!connected}
+        className={cn(
+          'px-6 py-3 rounded-full transition-all duration-300 text-lg',
+          connected
+            ? 'bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700'
+            : 'bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700',
+          'text-white font-medium',
+          'flex items-center gap-3'
+        )}
+      >
+        <Wallet className="h-5 w-5" />
+        {connected ? "Connect Wallet" : "Connected"}
+      </Button>
+      
+      {isAndroid && !window.ethereum && (
+        <div className="mt-4 text-center">
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Metamask not installed?</p>
+          <a 
+            href="https://metamask.app.link/dapp/sriche.netlify.app/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-blue-500 hover:text-blue-600 text-sm font-medium"
+          >
+            Click here for mobile
+          </a>
+        </div>
+      )}
+    </>
+  );
+};
+
 const NavLinks = ({ mobile, onClick }: { mobile?: boolean; onClick?: () => void }) => {
   const links = [
     { href: '#hero', label: 'About' },

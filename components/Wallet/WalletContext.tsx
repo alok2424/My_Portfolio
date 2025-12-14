@@ -1,77 +1,58 @@
-"use client";
+"use client"
+import { useState } from "react";
+import ABI from "./ABI.json";
+import Web3 from "web3";
 
-import { createContext, useContext, useState, ReactNode } from 'react';
-import Web3 from 'web3';
-import ABI from './ABI.json';
-
-interface WalletContextType {
-  web3: any;
+type WalletState = {
+  web3: Web3;
   contract: any;
-  isConnected: boolean;
-  isConnecting: boolean;
-  connectWallet: () => Promise<void>;
-}
+};
 
-const WalletContext = createContext<WalletContextType>({
-  web3: null,
-  contract: null,
-  isConnected: false,
-  isConnecting: false,
-  connectWallet: async () => {},
-});
+type WalletProps = {
+  saveState: (state: WalletState) => void;
+};
 
-export const useWallet = () => useContext(WalletContext);
+const Wallet: React.FC<WalletProps> = ({ saveState }) => {
+  const [connected, setConnected] = useState(true);
+  const isAndroid = /android/i.test(navigator.userAgent);
 
-export function WalletProvider({ children }: { children: ReactNode }) {
-  const [web3, setWeb3] = useState<any>(null);
-  const [contract, setContract] = useState<any>(null);
-  const [isConnected, setIsConnected] = useState(false);
-  const [isConnecting, setIsConnecting] = useState(false);
-
-  const connectWallet = async () => {
+  const init = async () => {
     try {
-      if (!window.ethereum) {
-        alert("Please install MetaMask.");
-        return;
+      if (typeof window === "undefined" || !window.ethereum) {
+        throw new Error("Please Install Metamask");
       }
 
-      setIsConnecting(true);
-      const web3Instance = new Web3(window.ethereum);
+      const web3 = new Web3(window.ethereum);
+      await window.ethereum.request({ method: "eth_requestAccounts" });
 
-      const accounts = await window.ethereum.request({
-        method: "eth_requestAccounts",
-      });
-
-      if (!accounts || accounts.length === 0) {
-        throw new Error("No accounts found");
-      }
-
-      const contractInstance = new web3Instance.eth.Contract(
-        ABI as any,
-        "0x8E15156424e1BB232F8D891Cab7110AdF16BE5e1"
+      const contract = new web3.eth.Contract(
+        ABI,
+        "0xD76852B784ec1Ec11Db89dABeE7a0DAC2FDEB466"
       );
 
-      setWeb3(web3Instance);
-      setContract(contractInstance);
-      setIsConnected(true);
-      
-    } catch (error) {
-      console.error("Connection error:", error);
-      alert("MetaMask connection failed. Please try again.");
-    } finally {
-      setIsConnecting(false);
+      setConnected(false);
+      saveState({ web3, contract });
+    } catch (error: any) {
+      alert(error?.message ?? "Please Install Metamask");
     }
   };
 
   return (
-    <WalletContext.Provider value={{
-      web3,
-      contract,
-      isConnected,
-      isConnecting,
-      connectWallet
-    }}>
-      {children}
-    </WalletContext.Provider>
+    <>
+      <div className="header">
+        {isAndroid && (
+          <button className="connectBTN">
+            <a href="https://metamask.app.link/dapp/sriche.netlify.app/">
+              Click For Mobile
+            </a>
+          </button>
+        )}
+        <button className="connectBTN" onClick={init} disabled={!connected}>
+          {connected ? "Connect Metamask" : "Connected"}
+        </button>
+      </div>
+    </>
   );
-}
+};
+
+export default Wallet;

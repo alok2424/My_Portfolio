@@ -7,22 +7,24 @@ import Hero from '@/components/hero';
 import Portfolio from '@/components/Portfolio';
 import ProjectsSection from '@/components/Project';
 import SkillsSection from '@/components/skills';
-import Wallet from '@/components/Wallet/WalletContext';
-import { useState } from 'react';
+
 
 export default function Home() {
-  const [state, setState] = useState({
-    web3: null,
-    contract: null,
-  });
+  // Remove the local state management
+  // const [state, setState] = useState({
+  //   web3: null,
+  //   contract: null,
+  // });
+  
+  // Remove saveState function
+  // const saveState = (newState: any) => {
+  //   setState(newState);
+  // };
 
-  const saveState = (newState: any) => {
-    setState(newState);
-  };
 
   return (
     <main>
-      <Wallet saveState={saveState} />
+   
       <Hero />
       <Achievements />
       <Experience />
